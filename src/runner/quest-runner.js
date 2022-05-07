@@ -7,10 +7,12 @@ const config = require("./../config.json");
 const abi = require("./abi.json");
 const abiv1 = require("./abiv1.json");
 const rewardLookup = require("./rewards.json");
+const { verify } = require("crypto");
+const { version } = require("os");
 
 const callOptions = { gasPrice: config.gasPrice, gasLimit: config.gasLimit };
 
-let provider, questContract, wallet;
+let provider, questContract, wallet, questContractv1;
 
 async function main() {
     try {
@@ -22,7 +24,7 @@ async function main() {
         );
 
         questContractv1 = new ethers.Contract(
-            config.questContract,
+            config.questContractv1,
             abiv1,
             provider
         );
@@ -122,17 +124,50 @@ async function checkForQuests() {
             )
         );
 
+        console.log("\nChecking for v1 quests...\n");
+        let activeQuestsv1 = await questContractv1.getActiveQuests(
+            config.wallet.address
+        );
+        // Display the finish time for any quests in progress
+        let runningQuestsv1 = activeQuestsv1.filter(
+            (quest) => quest.completeAtTime >= Math.round(Date.now() / 1000)
+        );        
+        
+        runningQuestsv1.forEach((quest) =>
+            console.log(
+                `Quest led by hero ${
+                    quest.heroes[0]
+                } is due to complete at ${displayTime(quest.completeAtTime)}`
+            )
+        );
+
         // Complete any quests that need to be completed
         let doneQuests = activeQuests.filter(
             (quest) => !runningQuests.includes(quest)
         );
+        
         for (const quest of doneQuests) {
-            await completeQuest(quest.heroes[0]);
+            var filtered = config.quests.filter(a => a.contractAddress==quest.questAddress)
+            await completeQuest(quest.heroes[0],parseInt(filtered[0].version));
+        }
+
+        // Complete any v1 quests that need to be completed
+        let doneQuestsv1 = activeQuestsv1.filter(
+            (quest) => !runningQuestsv1.includes(quest)
+        );
+        for (const quest of doneQuestsv1) {
+            var filtered = config.quests.filter(a => a.contractAddress==quest.quest)
+            await completeQuest(quest.heroes[0],parseInt(filtered[0].version));
         }
 
         // Start any quests needing to start
-        let questsToStart = await getQuestsToStart(activeQuests);
+        let questsToStart = await getQuestsToStart(activeQuests,1);
         for (const quest of questsToStart) {
+            await startQuest(quest);
+        }
+        // Start any v1 quests needing to start
+        let questsToStartv1 = await getQuestsToStart(activeQuestsv1,0);
+        for (const quest of questsToStartv1) {
             await startQuest(quest);
         }
 
@@ -149,16 +184,16 @@ async function checkForQuests() {
     }
 }
 
-async function getQuestsToStart(activeQuests) {
+async function getQuestsToStart(activeQuests,version) {
     var questsToStart = new Array();
     var questingHeroes = new Array();
 
     activeQuests.forEach((q) =>
         q.heroes.forEach((h) => questingHeroes.push(Number(h)))
     );
-
-    for (const quest of config.quests) {
-        if (quest.professionHeroes.length > 0) {
+    var filtered = config.quests.filter(a => a.version==version)
+    for (const quest of filtered) {
+        if (quest.professionHeroes.length > 0 ) {
             var readyHeroes = await getHeroesWithGoodStamina(
                 questingHeroes,
                 quest,
@@ -171,7 +206,8 @@ async function getQuestsToStart(activeQuests) {
                 professional: true,
                 heroes: readyHeroes,
                 attempts: config.professionMaxAttempts,
-                level:quest.level
+                level:quest.level,
+                version:quest.version
             });
         }
 
@@ -188,6 +224,8 @@ async function getQuestsToStart(activeQuests) {
                 professional: false,
                 heroes: readyHeroes,
                 attempts: config.nonProfessionMaxAttempts,
+                level:quest.level,
+                version:quest.version
             });
         }
     }
@@ -268,19 +306,36 @@ async function startQuestBatch(quest, questingGroup) {
                 quest.professional ? "Professional" : "Non-professional"
             } ${quest.name} quest with hero(es) ${questingGroup}.`
         );
-        await tryTransaction(
-            () =>
-                questContract
-                    .connect(wallet)
-                    .startQuest(
-                        questingGroup,
-                        quest.address,
-                        quest.attempts,
-                        quest.level,
-                        callOptions
-                    ),
-            2
-        );
+        if(quest.version==1){
+            await tryTransaction(
+                () =>
+                    questContract
+                        .connect(wallet)
+                        .startQuest(
+                            questingGroup,
+                            quest.address,
+                            quest.attempts,
+                            quest.level,
+                            callOptions
+                        ),
+                2
+            );
+        }
+        else{
+            await tryTransaction(
+                () =>
+                    questContractv1
+                        .connect(wallet)
+                        .startQuest(
+                            questingGroup,
+                            quest.address,
+                            1,
+                            callOptions
+                        ),
+                2
+            );
+        }
+        
         console.log(
             `Started ${
                 quest.professional ? "Professional" : "Non-professional"
@@ -293,17 +348,29 @@ async function startQuestBatch(quest, questingGroup) {
     }
 }
 
-async function completeQuest(heroId) {
+async function completeQuest(heroId,version) {
     try {
         console.log(`Completing quest led by hero ${heroId}`);
 
-        let receipt = await tryTransaction(
-            () =>
-                questContract
-                    .connect(wallet)
-                    .completeQuest(heroId, callOptions),
-            2
-        );
+        if(version==1){
+            let receipt = await tryTransaction(
+                () =>
+                    questContract
+                        .connect(wallet)
+                        .completeQuest(heroId, callOptions),
+                2
+            );
+        }
+        else{
+            let receipt = await tryTransaction(
+                () =>
+                    questContractv1
+                        .connect(wallet)
+                        .completeQuest(heroId, callOptions),
+                2
+            );
+        }
+        
 
         console.log(`\n***** Completed quest led by hero ${heroId} *****\n`);
 
