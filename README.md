@@ -83,7 +83,7 @@ If you're wanting to get your hands dirty with the source code and maybe contrib
 
 # Configuration
 
-Configuration is handled in `config.json`. The key configuration settings to be aware of are:
+Configuration is handled in `config.json`. Raname the config-sample.json file to config.json and make your changes. The key configuration settings to be aware of are:
 
 ```
 wallet

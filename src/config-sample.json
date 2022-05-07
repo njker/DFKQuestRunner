@@ -1,0 +1,120 @@
+{
+    "wallet": {
+        "address": "wallet address",
+        "encryptedWalletPath": "./w.json"
+    },
+
+    "professionMaxAttempts": 5,
+    "nonProfessionMaxAttempts": 3,
+    "maxQuestGroupSize": 6,
+
+    "pollingInterval": "300000",
+
+    "quests": [
+        {
+            "name": "Fishing",
+            "professionHeroes": [],
+            "nonProfessionHeroes": [],
+            "contractAddress": "0xE259e8386d38467f0E7fFEdB69c3c9C935dfaeFc",
+            "level":0,
+            "version":1
+        },
+        {
+            "name": "Foraging",
+            "professionHeroes": [11,22],
+            "nonProfessionHeroes": [],
+            "contractAddress": "0xB465F4590095daD50FEe6Ee0B7c6700AC2b04dF8",
+            "level":0,
+            "version":1
+            
+        },
+        {
+            "name": "WishingWell",
+            "professionHeroes": [],
+            "nonProfessionHeroes": [],
+            "contractAddress": "0x0548214A0760a897aF53656F4b69DbAD688D8f29",
+            "level":0,
+            "version":0
+        },
+        {
+            "name": "Mining",
+            "professionHeroes": [],
+            "nonProfessionHeroes": [],
+            "contractAddress": "0x569E6a4c2e3aF31B337Be00657B4C040C828Dd73",
+            "level":0,
+            "version":0
+        },
+        {
+            "name": "Strength",
+            "professionHeroes": [],
+            "nonProfessionHeroes": [],
+            "contractAddress": "0xf60AF3a32Bb94e395E17C70aB695d968F37Bd2e4",
+            "level":1,
+            "version":1
+        },
+        {
+            "name": "Agility",
+            "professionHeroes": [],
+            "nonProfessionHeroes": [],
+            "contractAddress": "0xFA20B218927B0f57a08196743488c7C790a5625B",
+            "level":1,
+            "version":1
+        },
+        {
+            "name": "Wisdom",
+            "professionHeroes": [],
+            "nonProfessionHeroes": [],
+            "contractAddress": "0x347097454fA1931A4e80dcDebb31F29FC355CbCE",
+            "level":1,
+            "version":1
+        }
+        ,
+        {
+            "name": "Dexterity",
+            "professionHeroes": [],
+            "nonProfessionHeroes": [],
+            "contractAddress": "0xe03fd4e2F6421b1251297240cE5248508C9104eD",
+            "level":1,
+            "version":1
+        }
+        ,
+        {
+            "name": "Intelligence",
+            "professionHeroes": [],
+            "nonProfessionHeroes": [],
+            "contractAddress": "0x6176EedE1AE9127D59266f197Ad598653E4F8c92",
+            "level":1,
+            "version":1
+        }
+        ,
+        {
+            "name": "Vitality",
+            "professionHeroes": [],
+            "nonProfessionHeroes": [],
+            "contractAddress": "0x2174bBeFbEFBD766326a7C7538f93a78Db3eD449",
+            "level":1,
+            "version":1
+        },
+        {
+            "name": "Luck",
+            "professionHeroes": [],
+            "nonProfessionHeroes": [],
+            "contractAddress": "0x13E74E4E64805E7fdA381C9BEF1e77cd16086E56",
+            "level":1,
+            "version":1
+        }
+    ],
+
+    "questContract": "0xaa9a289ce0565e4d6548e63a441e7c084e6b52f6",
+    "questContractv1":"0x5100bd31b822371108a0f63dcfb6594b9919eaf4",
+    "heroContract": "0x5f753dcdf9b1ad9aabc1346614d1f4746fd6ce5c",
+
+    "useBackupRpc": false,
+    "rpc": {
+        "harmonyRpc": "https://api.harmony.one",
+        "poktRpc": "https://harmony-0-rpc.gateway.pokt.network"
+    },
+
+    "gasPrice": 35000000000,
+    "gasLimit": 8000000
+}
