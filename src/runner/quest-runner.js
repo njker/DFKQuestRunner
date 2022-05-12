@@ -239,7 +239,7 @@ async function getHeroesWithGoodStamina(
     maxAttempts,
     professional
 ) {
-    let minStamina = professional ? 5 * maxAttempts : 7 * maxAttempts;
+    let minStamina = quest.minStamina ? quest.minStamina : professional ? 5 * maxAttempts : 7 * maxAttempts;
 
     let heroes = professional
         ? quest.professionHeroes
@@ -351,9 +351,9 @@ async function startQuestBatch(quest, questingGroup) {
 async function completeQuest(heroId,version) {
     try {
         console.log(`Completing quest led by hero ${heroId}`);
-
+        let receipt
         if(version==1){
-            let receipt = await tryTransaction(
+            receipt = await tryTransaction(
                 () =>
                     questContract
                         .connect(wallet)
@@ -362,7 +362,7 @@ async function completeQuest(heroId,version) {
             );
         }
         else{
-            let receipt = await tryTransaction(
+            receipt = await tryTransaction(
                 () =>
                     questContractv1
                         .connect(wallet)

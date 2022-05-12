@@ -50,7 +50,8 @@
             "nonProfessionHeroes": [],
             "contractAddress": "0xf60AF3a32Bb94e395E17C70aB695d968F37Bd2e4",
             "level":1,
-            "version":1
+            "version":1,
+            "minStamina":15
         },
         {
             "name": "Agility",
