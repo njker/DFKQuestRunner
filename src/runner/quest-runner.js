@@ -108,6 +108,7 @@ async function promptForInput(prompt, promptFor) {
 async function checkForQuests() {
     try {
         console.log("\nChecking for quests...\n");
+        
         let activeQuests = await questContract.getAccountActiveQuests(
             config.wallet.address
         );
@@ -118,8 +119,7 @@ async function checkForQuests() {
         );
         runningQuests.forEach((quest) =>
             console.log(
-                `Quest led by hero ${
-                    quest.heroes[0]
+                `Quest led by hero ${quest.heroes[0]
                 } is due to complete at ${displayTime(quest.completeAtTime)}`
             )
         );
@@ -131,12 +131,11 @@ async function checkForQuests() {
         // Display the finish time for any quests in progress
         let runningQuestsv1 = activeQuestsv1.filter(
             (quest) => quest.completeAtTime >= Math.round(Date.now() / 1000)
-        );        
-        
+        );
+
         runningQuestsv1.forEach((quest) =>
             console.log(
-                `Quest led by hero ${
-                    quest.heroes[0]
+                `Quest led by hero ${quest.heroes[0]
                 } is due to complete at ${displayTime(quest.completeAtTime)}`
             )
         );
@@ -145,10 +144,10 @@ async function checkForQuests() {
         let doneQuests = activeQuests.filter(
             (quest) => !runningQuests.includes(quest)
         );
-        
+
         for (const quest of doneQuests) {
-            var filtered = config.quests.filter(a => a.contractAddress==quest.questAddress)
-            await completeQuest(quest.heroes[0],parseInt(filtered[0].version));
+            var filtered = config.quests.filter(a => a.contractAddress == quest.questAddress)
+            await completeQuest(quest.heroes[0], parseInt(filtered[0].version));
         }
 
         // Complete any v1 quests that need to be completed
@@ -156,17 +155,17 @@ async function checkForQuests() {
             (quest) => !runningQuestsv1.includes(quest)
         );
         for (const quest of doneQuestsv1) {
-            var filtered = config.quests.filter(a => a.contractAddress==quest.quest)
-            await completeQuest(quest.heroes[0],parseInt(filtered[0].version));
+            var filtered = config.quests.filter(a => a.contractAddress == quest.quest)
+            await completeQuest(quest.heroes[0], parseInt(filtered[0].version));
         }
 
         // Start any quests needing to start
-        let questsToStart = await getQuestsToStart(activeQuests,1);
+        let questsToStart = await getQuestsToStart(activeQuests, 1);
         for (const quest of questsToStart) {
             await startQuest(quest);
         }
         // Start any v1 quests needing to start
-        let questsToStartv1 = await getQuestsToStart(activeQuestsv1,0);
+        let questsToStartv1 = await getQuestsToStart(activeQuestsv1, 0);
         for (const quest of questsToStartv1) {
             await startQuest(quest);
         }
@@ -177,38 +176,53 @@ async function checkForQuests() {
     } catch (err) {
         console.error(
             `An error occured. Will attempt to retry in ` +
-                `${config.pollingInterval / 1000} seconds... Error:`,
+            `${config.pollingInterval / 1000} seconds... Error:`,
             err
         );
         setTimeout(() => checkForQuests(), config.pollingInterval);
     }
 }
 
-async function getQuestsToStart(activeQuests,version) {
+async function getQuestsToStart(activeQuests, version) {
     var questsToStart = new Array();
     var questingHeroes = new Array();
 
     activeQuests.forEach((q) =>
         q.heroes.forEach((h) => questingHeroes.push(Number(h)))
     );
-    var filtered = config.quests.filter(a => a.version==version)
+    var filtered = config.quests.filter(a => a.version == version)
     for (const quest of filtered) {
-        if (quest.professionHeroes.length > 0 ) {
+        if (quest.professionHeroes.length > 0) {
             var readyHeroes = await getHeroesWithGoodStamina(
                 questingHeroes,
                 quest,
                 config.professionMaxAttempts,
                 true
             );
-            questsToStart.push({
-                name: quest.name,
-                address: quest.contractAddress,
-                professional: true,
-                heroes: readyHeroes,
-                attempts: config.professionMaxAttempts,
-                level:quest.level,
-                version:quest.version
-            });
+            if (quest.name == "Gardening") {
+                readyHeroes.forEach((q) =>
+                    questsToStart.push({
+                        name: quest.name,
+                        address: quest.contractAddress,
+                        professional: true,
+                        heroes: q,
+                        attempts: 1,
+                        level: quest.level,
+                        version: quest.version,
+                        data: [quest.data.filter(p => p.id == q)[0].pool, 0, 0, 0, 0, 0, '', '', config.ZERO_ADDRESS, config.ZERO_ADDRESS, config.ZERO_ADDRESS, config.ZERO_ADDRESS],
+                    }));
+            }
+            else {
+                questsToStart.push({
+                    name: quest.name,
+                    address: quest.contractAddress,
+                    professional: true,
+                    heroes: readyHeroes,
+                    attempts: config.professionMaxAttempts,
+                    level: quest.level,
+                    version: quest.version
+                });
+            }
         }
 
         if (quest.nonProfessionHeroes.length > 0) {
@@ -224,8 +238,8 @@ async function getQuestsToStart(activeQuests,version) {
                 professional: false,
                 heroes: readyHeroes,
                 attempts: config.nonProfessionMaxAttempts,
-                level:quest.level,
-                version:quest.version
+                level: quest.level,
+                version: quest.version
             });
         }
     }
@@ -269,8 +283,7 @@ async function getHeroesWithGoodStamina(
 
     if (!heroesWithGoodStamina.length) {
         console.log(
-            `${professional ? "Professional" : "Non-professional"} ${
-                quest.name
+            `${professional ? "Professional" : "Non-professional"} ${quest.name
             } quest is not ready to start.`
         );
     }
@@ -280,17 +293,22 @@ async function getHeroesWithGoodStamina(
 
 async function startQuest(quest) {
     try {
-        let batch = 0;
-        while (true) {
-            var groupStart = batch * config.maxQuestGroupSize;
-            let questingGroup = quest.heroes.slice(
-                groupStart,
-                groupStart + config.maxQuestGroupSize
-            );
-            if (questingGroup.length === 0) break;
+        if (quest.name == "Gardening") {
+            await startQuestBatch(quest, [quest.heroes]);
+        }
+        else {
+            let batch = 0;
+            while (true) {
+                var groupStart = batch * config.maxQuestGroupSize;
+                let questingGroup = quest.heroes.slice(
+                    groupStart,
+                    groupStart + config.maxQuestGroupSize
+                );
+                if (questingGroup.length === 0) break;
 
-            await startQuestBatch(quest, questingGroup);
-            batch++;
+                await startQuestBatch(quest, questingGroup);
+                batch++;
+            }
         }
     } catch (err) {
         console.warn(
@@ -302,11 +320,10 @@ async function startQuest(quest) {
 async function startQuestBatch(quest, questingGroup) {
     try {
         console.log(
-            `Starting ${
-                quest.professional ? "Professional" : "Non-professional"
+            `Starting ${quest.professional ? "Professional" : "Non-professional"
             } ${quest.name} quest with hero(es) ${questingGroup}.`
         );
-        if(quest.version==1){
+        if (quest.version == 1) {
             await tryTransaction(
                 () =>
                     questContract
@@ -321,24 +338,40 @@ async function startQuestBatch(quest, questingGroup) {
                 2
             );
         }
-        else{
-            await tryTransaction(
-                () =>
-                    questContractv1
-                        .connect(wallet)
-                        .startQuest(
-                            questingGroup,
-                            quest.address,
-                            1,
-                            callOptions
-                        ),
-                2
-            );
+        else {
+            if (quest.name == "Mining") {
+                await tryTransaction(
+                    () =>
+                        questContractv1
+                            .connect(wallet)
+                            .startQuest(
+                                questingGroup,
+                                quest.address,
+                                1,
+                                callOptions
+                            ),
+                    2
+                );
+            }
+            else {
+                await tryTransaction(
+                    () =>
+                        questContractv1
+                            .connect(wallet)
+                            .startQuestWithData(
+                                questingGroup,
+                                quest.address,
+                                1,                                                                
+                                quest.data,
+                                callOptions
+                            ),
+                    2
+                );
+            }
         }
-        
+
         console.log(
-            `Started ${
-                quest.professional ? "Professional" : "Non-professional"
+            `Started ${quest.professional ? "Professional" : "Non-professional"
             } ${quest.name} quest.`
         );
     } catch (err) {
@@ -348,11 +381,11 @@ async function startQuestBatch(quest, questingGroup) {
     }
 }
 
-async function completeQuest(heroId,version) {
+async function completeQuest(heroId, version) {
     try {
         console.log(`Completing quest led by hero ${heroId}`);
         let receipt
-        if(version==1){
+        if (version == 1) {
             receipt = await tryTransaction(
                 () =>
                     questContract
@@ -361,7 +394,7 @@ async function completeQuest(heroId,version) {
                 2
             );
         }
-        else{
+        else {
             receipt = await tryTransaction(
                 () =>
                     questContractv1
@@ -370,7 +403,7 @@ async function completeQuest(heroId,version) {
                 2
             );
         }
-        
+
 
         console.log(`\n***** Completed quest led by hero ${heroId} *****\n`);
 
@@ -384,11 +417,10 @@ async function completeQuest(heroId,version) {
 
         let suEvents = receipt.events.filter((e) => e.event === "QuestSkillUp");
         console.log(
-            `SkillUp: ${
-                suEvents.reduce(
-                    (total, result) => total + Number(result.args.skillUp),
-                    0
-                ) / 10
+            `SkillUp: ${suEvents.reduce(
+                (total, result) => total + Number(result.args.skillUp),
+                0
+            ) / 10
             }`
         );
 

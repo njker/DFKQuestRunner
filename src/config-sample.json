@@ -45,6 +45,29 @@
             "version":0
         },
         {
+            "name": "Gardening",
+            "professionHeroes": [],
+            "nonProfessionHeroes": [],
+            "contractAddress": "0xe4154B6E5D240507F9699C730a496790A722DF19",
+            "minStamina": 15,
+            "level": 0,
+            "version": 0,
+            "data": [
+                {
+                    "id": "heroid1",
+                    "pool": 0
+                },
+                {
+                    "id": "heroid2",
+                    "pool": 1
+                },
+                {
+                    "id": "heroid3",
+                    "pool": 2
+                }
+            ]
+        },
+        {
             "name": "Strength",
             "professionHeroes": [],
             "nonProfessionHeroes": [],
