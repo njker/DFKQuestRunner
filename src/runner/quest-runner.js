@@ -10,7 +10,6 @@ const rewardLookup = require("./rewards.json");
 const { verify } = require("crypto");
 const { version } = require("os");
 
-const callOptions = { gasPrice: config.gasPrice, gasLimit: config.gasLimit };
 
 let provider, questContract, wallet, questContractv1;
 
@@ -108,7 +107,12 @@ async function promptForInput(prompt, promptFor) {
 async function checkForQuests() {
     try {
         console.log("\nChecking for quests...\n");
-        
+
+        curfeeData = await provider.getFeeData();
+        console.log('MaxFeepergas: %s maxpriorityfeepergas:%s gasPrice:%s',curfeeData.maxFeePerGas,curfeeData.maxPriorityFeePerGas,curfeeData.gasPrice)
+        lastBlock = await provider.getBlock(-1);
+        console.log('Gas limit: %s Gas Used: %s baseFeePerGas: %s',lastBlock.gasLimit.toString(), lastBlock.gasUsed.toString(), lastBlock.baseFeePerGas.toString());
+
         let activeQuests = await questContract.getAccountActiveQuests(
             config.wallet.address
         );
@@ -124,6 +128,7 @@ async function checkForQuests() {
             )
         );
 
+        /*
         console.log("\nChecking for v1 quests...\n");
         let activeQuestsv1 = await questContractv1.getActiveQuests(
             config.wallet.address
@@ -139,7 +144,7 @@ async function checkForQuests() {
                 } is due to complete at ${displayTime(quest.completeAtTime)}`
             )
         );
-
+        */
         // Complete any quests that need to be completed
         let doneQuests = activeQuests.filter(
             (quest) => !runningQuests.includes(quest)
@@ -150,6 +155,7 @@ async function checkForQuests() {
             await completeQuest(quest.heroes[0], parseInt(filtered[0].version));
         }
 
+        /*
         // Complete any v1 quests that need to be completed
         let doneQuestsv1 = activeQuestsv1.filter(
             (quest) => !runningQuestsv1.includes(quest)
@@ -158,18 +164,19 @@ async function checkForQuests() {
             var filtered = config.quests.filter(a => a.contractAddress == quest.quest)
             await completeQuest(quest.heroes[0], parseInt(filtered[0].version));
         }
-
+        */
         // Start any quests needing to start
         let questsToStart = await getQuestsToStart(activeQuests, 1);
         for (const quest of questsToStart) {
             await startQuest(quest);
         }
+        /*
         // Start any v1 quests needing to start
         let questsToStartv1 = await getQuestsToStart(activeQuestsv1, 0);
         for (const quest of questsToStartv1) {
             await startQuest(quest);
         }
-
+        */
         setTimeout(() => checkForQuests(), config.pollingInterval);
 
         console.log(`Waiting for ${config.pollingInterval / 1000} seconds...`);
@@ -211,6 +218,17 @@ async function getQuestsToStart(activeQuests, version) {
                         version: quest.version,
                         data: [quest.data.filter(p => p.id == q)[0].pool, 0, 0, 0, 0, 0, '', '', config.ZERO_ADDRESS, config.ZERO_ADDRESS, config.ZERO_ADDRESS, config.ZERO_ADDRESS],
                     }));
+            }
+            if (quest.name == "Mining") {
+                questsToStart.push({
+                    name: quest.name,
+                    address: quest.contractAddress,
+                    professional: true,
+                    heroes: readyHeroes,
+                    attempts: 1,
+                    level: quest.level,
+                    version: quest.version
+                });
             }
             else {
                 questsToStart.push({
@@ -323,6 +341,12 @@ async function startQuestBatch(quest, questingGroup) {
             `Starting ${quest.professional ? "Professional" : "Non-professional"
             } ${quest.name} quest with hero(es) ${questingGroup}.`
         );
+        feeData = await provider.getFeeData();
+        txData = {
+            maxPriorityFeePerGas: feeData["maxPriorityFeePerGas"], // Recommended maxPriorityFeePerGas
+            maxFeePerGas: feeData["maxFeePer"]
+        };
+		callOptions = { gasPrice: lastBlock.baseFeePerGas, gasLimit: lastBlock.gasLimit };
         if (quest.version == 1) {
             await tryTransaction(
                 () =>
@@ -333,7 +357,7 @@ async function startQuestBatch(quest, questingGroup) {
                             quest.address,
                             quest.attempts,
                             quest.level,
-                            callOptions
+                            txData
                         ),
                 2
             );
@@ -348,7 +372,7 @@ async function startQuestBatch(quest, questingGroup) {
                                 questingGroup,
                                 quest.address,
                                 1,
-                                callOptions
+                                txData
                             ),
                     2
                 );
@@ -361,9 +385,9 @@ async function startQuestBatch(quest, questingGroup) {
                             .startQuestWithData(
                                 questingGroup,
                                 quest.address,
-                                1,                                                                
+                                1,
                                 quest.data,
-                                callOptions
+                                txData
                             ),
                     2
                 );
@@ -383,14 +407,19 @@ async function startQuestBatch(quest, questingGroup) {
 
 async function completeQuest(heroId, version) {
     try {
-        console.log(`Completing quest led by hero ${heroId}`);
+        console.log(`Completing quest led by hero ${heroId}`);        
+        feeData = await provider.getFeeData();
+        txData = {
+            maxPriorityFeePerGas: feeData["maxPriorityFeePerGas"], // Recommended maxPriorityFeePerGas
+            maxFeePerGas: feeData["maxFeePer"]
+        };
         let receipt
         if (version == 1) {
             receipt = await tryTransaction(
                 () =>
                     questContract
                         .connect(wallet)
-                        .completeQuest(heroId, callOptions),
+                        .completeQuest(heroId, txData),
                 2
             );
         }
@@ -399,7 +428,7 @@ async function completeQuest(heroId, version) {
                 () =>
                     questContractv1
                         .connect(wallet)
-                        .completeQuest(heroId, callOptions),
+                        .completeQuest(heroId, txData),
                 2
             );
         }
@@ -461,7 +490,7 @@ function getRewardDescription(rewardAddress) {
 }
 
 function getRpc() {
-    return config.useBackupRpc ? config.rpc.poktRpc : config.rpc.harmonyRpc;
+    return config.useBackupRpc ? config.rpc.spacingRpc : config.rpc.harmonyRpc;
 }
 
 function displayTime(timestamp) {
